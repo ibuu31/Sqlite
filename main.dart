@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqlite_api.dart';
 import 'package:sqlite_tutorial/database_helper.dart';
 
 void main() {
@@ -30,51 +31,67 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   TextEditingController nameController = TextEditingController();
   String displayText = '';
-  List<Contacts> contact = List.empty(growable: true);
+  List<String> contact = [];
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        body: Center(
+        body: SafeArea(
           child: Container(
+            margin: EdgeInsets.all(10),
             color: Colors.white,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                TextField(
-                  decoration: const InputDecoration(
-                      border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black)),
-                      labelText: 'Enter Name',
-                      hintText: 'Enter Your Name'),
-                  controller: nameController,
+                Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.black)),
+                        labelText: 'Enter Name',
+                        hintText: 'Enter Your Name'),
+                    controller: nameController,
+                  ),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
-                    displayText = nameController.text;
-                    await DatabaseHelper.instance
-                        .insert({DatabaseHelper.columnName: displayText});
-                    setState(() {
-                      contact.add(Contacts(name: displayText));
-                    });
-                  },
-                  child: const Text('Create'),
+                Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: insertIntoDatabase,
+                        child: const Text('Create'),
+                      ),
+                      ElevatedButton(
+                          onPressed: readDataFromDatabase, child: Text('Read')),
+                    ],
+                  ),
                 ),
-                ElevatedButton(
-                    onPressed: () async {
-                      var dbquery =
-                          await DatabaseHelper.instance.queryDatabase();
-                      print(dbquery);
-                    },
-                    child: const Text('Read')),
-                ElevatedButton(onPressed: () {}, child: const Text('Update')),
-                ElevatedButton(onPressed: () {}, child: const Text('Delete')),
                 Expanded(
                   child: ListView.builder(
                     itemCount: contact.length,
-                    itemBuilder: (context, index) => getRow(index),
+                    itemBuilder: (_, int position) {
+                      return Card(
+                        child: ListTile(
+                          leading: Text(contact.elementAt(position)),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                  onPressed: updateFromDatabase,
+                                  icon: Icon(Icons.edit)),
+                              IconButton(
+                                  onPressed: deleteFromDatabase,
+                                  icon: Icon(Icons.delete)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -83,11 +100,30 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget getRow(int index) {
-    return ListTile(
-      title: Column(
-        children: [Text(contact[index].name)],
-      ),
-    );
+  void insertIntoDatabase() async {
+    displayText = nameController.text;
+    await DatabaseHelper.instance
+        .insert({DatabaseHelper.columnName: displayText});
+    contact = displayText as List<String>;
+  }
+
+  void readDataFromDatabase() async {
+    contact.clear();
+    var dbquery = await DatabaseHelper.instance.queryDatabase();
+    print(dbquery);
+    for (int i = 0; i < dbquery.length; ++i) {
+      contact.add(dbquery[i]["name"]);
+    }
+    setState(() {});
+  }
+
+  void updateFromDatabase() async {
+    await DatabaseHelper.instance
+        .update({DatabaseHelper.columnId: 2, DatabaseHelper.columnName: 'xyz'});
+  }
+
+  void deleteFromDatabase() async {
+    await DatabaseHelper.instance.delete(contact.remove("id") as int);
+    setState(() {});
   }
 }
