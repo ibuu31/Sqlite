@@ -1,6 +1,8 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqlite_api.dart';
-import 'package:todo/database_helper.dart';
+import 'package:sqlite_tutorial/database_helper.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +20,9 @@ class MyApp extends StatelessWidget {
 
 class Contacts {
   String name = '';
-  Contacts({required name});
+  int id;
+
+  Contacts(this.name, this.id);
 }
 
 class HomePage extends StatefulWidget {
@@ -29,9 +33,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  TextEditingController nameController = TextEditingController();
+  final nameController = TextEditingController();
   String displayText = '';
-  List<String> contact = [];
+  //this displayText will take the value from the nameController
+  List<Contacts> contact = [];
 
   @override
   Widget build(BuildContext context) {
@@ -60,10 +65,12 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      //create button
                       ElevatedButton(
                         onPressed: insertIntoDatabase,
                         child: const Text('Create'),
                       ),
+                      //read button
                       ElevatedButton(
                           onPressed: readDataFromDatabase, child: Text('Read')),
                     ],
@@ -75,21 +82,24 @@ class _HomePageState extends State<HomePage> {
                     itemBuilder: (_, int position) {
                       return Card(
                         child: ListTile(
-                          leading: Text(contact.elementAt(position)),
+                          leading: Text(contact.elementAt(position).name),
                           title: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               IconButton(
-                                  onPressed: (){
+                                  onPressed: () {
                                     setState(() {
-                                      updateFromDatabase(position,contact.elementAt(position));
+                                      updateFromDatabase(
+                                          contact.elementAt(position).id,
+                                          contact.elementAt(position).name);
                                     });
                                   },
                                   icon: Icon(Icons.edit)),
                               IconButton(
-                                  onPressed: (){
+                                  onPressed: () {
                                     setState(() {
-                                      deleteFromDatabase(position);
+                                      deleteFromDatabase(
+                                          contact.elementAt(position).id);
                                     });
                                   },
                                   icon: Icon(Icons.delete)),
@@ -112,7 +122,9 @@ class _HomePageState extends State<HomePage> {
     displayText = nameController.text;
     await DatabaseHelper.instance
         .insert({DatabaseHelper.columnName: displayText});
-    contact = displayText as List<String>;
+    nameController.clear();
+    readDataFromDatabase();
+    contact = displayText as List<Contacts>;
   }
 
   void readDataFromDatabase() async {
@@ -120,24 +132,27 @@ class _HomePageState extends State<HomePage> {
     var dbquery = await DatabaseHelper.instance.queryDatabase();
     print(dbquery);
     for (int i = 0; i < dbquery.length; ++i) {
-      contact.add(dbquery[i]["name"]);
+      Contacts item = Contacts(dbquery[i]["name"], dbquery[i]["id"]);
+      contact.add(item);
     }
     setState(() {});
   }
 
-  void updateFromDatabase(int id,String name) async {
-    name = nameController.text;
-    await DatabaseHelper.instance
-        .update({DatabaseHelper.columnId: id, DatabaseHelper.columnName: name});
-    setState(() {
-
+  void updateFromDatabase(int idUpdate, String nameUpdate) async {
+    displayText = nameController.text;
+    Contacts items = Contacts(nameUpdate, idUpdate);
+    await DatabaseHelper.instance.update({
+      DatabaseHelper.columnId: items.id,
+      DatabaseHelper.columnName: displayText
     });
+    nameController.clear();
+
+    readDataFromDatabase();
+    contact = displayText as List<Contacts>;
   }
 
   void deleteFromDatabase(int id) async {
     await DatabaseHelper.instance.delete(id);
-    setState(() {
-      contact.removeAt(id);
-    });
+    readDataFromDatabase();
   }
 }
