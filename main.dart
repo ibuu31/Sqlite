@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqlite_api.dart';
-import 'package:sqlite_tutorial/database_helper.dart';
+import 'package:todo/database_helper.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,10 +80,18 @@ class _HomePageState extends State<HomePage> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               IconButton(
-                                  onPressed: updateFromDatabase,
+                                  onPressed: (){
+                                    setState(() {
+                                      updateFromDatabase(position,contact.elementAt(position));
+                                    });
+                                  },
                                   icon: Icon(Icons.edit)),
                               IconButton(
-                                  onPressed: deleteFromDatabase,
+                                  onPressed: (){
+                                    setState(() {
+                                      deleteFromDatabase(position);
+                                    });
+                                  },
                                   icon: Icon(Icons.delete)),
                             ],
                           ),
@@ -117,13 +125,19 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  void updateFromDatabase() async {
+  void updateFromDatabase(int id,String name) async {
+    name = nameController.text;
     await DatabaseHelper.instance
-        .update({DatabaseHelper.columnId: 2, DatabaseHelper.columnName: 'xyz'});
+        .update({DatabaseHelper.columnId: id, DatabaseHelper.columnName: name});
+    setState(() {
+
+    });
   }
 
-  void deleteFromDatabase() async {
-    await DatabaseHelper.instance.delete(contact.remove("id") as int);
-    setState(() {});
+  void deleteFromDatabase(int id) async {
+    await DatabaseHelper.instance.delete(id);
+    setState(() {
+      contact.removeAt(id);
+    });
   }
 }
